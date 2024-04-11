@@ -139,7 +139,7 @@ def generateSummary(args):
     print('Generating Summary Report. Writing to ' + args.output_folder)
     saveList = []
     header=False
-    for report in glob.iglob(args.output_folder + '/*/*_lineage.*'):
+    for report in list(sorted(glob.iglob(args.output_folder + '/*/*_lineage.*'))):
         infile = open(report).read().splitlines()
         if header == False:
             saveList.append(infile[0])
