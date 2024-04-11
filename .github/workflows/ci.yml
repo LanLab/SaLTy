@@ -8,7 +8,7 @@ name: Continuous Integration
 on:
   push:
     branches:
-      - main
+      - revisions
 jobs:
   test:
 
