@@ -22,7 +22,7 @@ class TestSalty_full(unittest.TestCase):
 
         self.maxDiff = 5000
         cwd = os.getcwd()
-        args = argparse.Namespace(input_folder = cwd+"/dodge/tests/inputs/",
+        args = argparse.Namespace(input_folder = cwd+"/salty/tests/inputs/",
                                     threads = 1,
                                     force = False,
                                     summary = True,
@@ -37,10 +37,10 @@ class TestSalty_full(unittest.TestCase):
                                     )
 
         salty.main(args)
+        sl(0.5)
+        outsummary = self.outputfolder+"/summaryReport.txt"
 
-        outsummary = self.outputfolder+"/summaryReport.csv"
-
-        expected_outsummary = cwd+"/salty/tests/expected_outputs/summaryReport.csv"
+        expected_outsummary = cwd+"/salty/tests/expected_outputs/summaryReport.txt"
 
 
         self.assertListEqual(
