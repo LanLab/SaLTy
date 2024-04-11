@@ -1,0 +1,13 @@
+name: salty_env
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+  - r
+dependencies:
+  - python >=3.8
+  - pip
+  - pandas >=1.5
+  - kma >=1.4.9
+  - mlst >=2.23
+  - salty

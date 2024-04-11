@@ -15,30 +15,32 @@ import sys
 def caller(path, args, start_time_ongoing):
     start_time_analysis = time.time() ##FIX
     alleles = {'Lineage':'-','SACOL1908': '-', 'SACOL0451': '-', 'SACOL2725': '-'}
-    parseInput(path, args) #alter DB path option
-    alleles = filtCalledAlleles(alleles, args)
-    alleles = getLineageFromAllele(alleles, args)
-    generateReport(alleles, args)
-    timer(os.environ['accession'], start_time_ongoing, start_time_analysis)
-def parseInput(path, args):
+    accession = getAccession(path[1])
+    outpath = runkma(path, args,accession)  #alter DB path option
+    alleles = filtCalledAlleles(alleles,outpath)
+    alleles = getLineageFromAllele(alleles, args,outpath)
+    alleles = checkFailedLineage(alleles, path, args,accession)
+    generateReport(alleles, args,accession,outpath)
+    timer(accession, start_time_ongoing, start_time_analysis)
+    
+def runkma(path, args,accession):
     if path[0] == 'assembly':
-        os.environ['accession'] = getAccession(path[1])
-        mkdirOutput(args)
-        outPath = args.output_folder + '/' + os.environ['accession'] + '/kma_' + os.environ['accession']
+        outPath = mkdirOutput(args,accession)
         p = subprocess.Popen(['kma','-i', path[1], '-t_db', args.kma_index, '-o', outPath, '-t', '1'])
         (output, err) = p.communicate()
         p_status = p.wait()
+        return outPath
 
     elif path[0] == 'pairedEndReadForward':
-        os.environ['accession'] = getAccession(path[1])
-        mkdirOutput(args)
-        outPath = args.output_folder + '/' + os.environ['accession'] + '/kma_' + os.environ['accession']
+        outPath = mkdirOutput(args,accession)
         inputSTR = f"""kma -ipe {path[1].replace('_1.','_*.')} -t_db {args.kma_index} -o {outPath} -t 1"""
         p = subprocess.Popen(inputSTR, shell=True)
         (output, err) = p.communicate()
         p_status = p.wait()
-def filtCalledAlleles(alleles, args):
-    resPath = args.output_folder + '/' + os.environ['accession'] + '/kma_' + os.environ['accession'] + '.res'
+        return outPath
+        
+def filtCalledAlleles(alleles,outpath):
+    resPath = outpath + '.res'
     df = pd.read_csv(resPath ,sep='\t')
     df = df[(df['Template_Identity'] == 100.00) & (df['Template_Coverage'] == 100.00) & (df['Query_Identity'] == 100.00)
         & (df['Query_Coverage'] == 100.00)]
@@ -50,7 +52,8 @@ def filtCalledAlleles(alleles, args):
         print('Passed: \t gene:' + str(gene) + '\t allele:' + str(allele))
 
     return alleles
-def getLineageFromAllele(alleles, args):
+
+def getLineageFromAllele(alleles, args,outpath):
     lineageAlleles = pd.read_csv(args.lineages)
     filtLineageAllelesDF = filtLineageAlleles(alleles, lineageAlleles)
 
@@ -65,11 +68,31 @@ def getLineageFromAllele(alleles, args):
 
     elif filtLineageAllelesDF.shape[0] > 1:
         alleles['Lineage'] = 'Mulitple Lineage Found'
-        filtLineageAllelesDF.to_csv(args.output_folder + "/" + os.environ['accession'] + "/" + os.environ['accession'] + '_multipleLineageAlleles.csv', index=False)
+        filtLineageAllelesDF.to_csv(outpath + '_multipleLineageAlleles.csv', index=False)
+        return alleles
+
+def checkFailedLineage(alleles, path, args,accession):
+    if args.mlstPrediction:
+        if alleles['Lineage'] == 'No lineages association.':
+            base = os.path.join(os.path.dirname(os.path.realpath(__file__)))
+            MLSTin = base + '/resources/MLSTtoSaLTy.csv'
+            MLSTtoSaLTyDf = pd.read_csv(MLSTin)
+            MLSTtype = getMLSTtype(path, args)
+            if MLSTtype.isdigit() and MLSTtype in MLSTtoSaLTyDf['7-Gene-MLST'].values:
+                MLSTtype = int(MLSTtype)
+                associatedSaLTy = MLSTtoSaLTyDf[MLSTtoSaLTyDf['7-Gene-MLST'] == MLSTtype]['SaLTy-Lineage'].values[0]
+                alleles['Lineage'] = f'*{associatedSaLTy}'
+                return alleles
+            else:
+                print(f""""{accession} is untypable with MLST. Therefore, lineage can not be predicted with SaLTy or MLST.""")
+                alleles['Lineage'] = '*No lineages association.'
+                return alleles
+        else:
+            return alleles
+    else:
         return alleles
 
 def getMLSTtype(path, args):
-    os.environ['accession'] = getAccession(path[1])
     MLSTOutput = subprocess.check_output(['mlst', '--quiet','--scheme', 'saureus', '--threads', str(args.threads), path[1]])
     type = MLSTOutput.decode('utf-8').split('\t')[2]
     return type
@@ -80,9 +103,10 @@ def filtLineageAlleles(alleles, lineageAllelesDF):
         if gene != 'Lineage':
             filtAllele = lineageAllelesDF[lineageAllelesDF[gene] == alleles[gene]]
             if filtAllele.shape[0] > 0:
-                filtAlleleIndex = filtAllele.index.values[0]
-                if filtAlleleIndex not in list(filtLineageAllelesDF.index):
-                    filtLineageAllelesDF = filtLineageAllelesDF.append(filtAllele, sort=True)
+                newlineage = filtAllele["Lineage"].values.tolist()
+                existinglineage = filtLineageAllelesDF["Lineage"].values.tolist()
+                if newlineage[0] not in existinglineage:
+                    filtLineageAllelesDF = pd.concat([filtLineageAllelesDF, filtAllele], ignore_index=True)
     return filtLineageAllelesDF
 
 #aux functions
@@ -96,19 +120,20 @@ def getAccession(path):
         acc = acc.split("_")[0]
         return acc
 
-def generateReport(alleles, args):
-    print(os.environ['accession'] + ': writing output.')
+def generateReport(alleles, args,accession,outpath):
+    print(accession + ': writing output.')
     print(alleles)
     outMeta = getOutMeta(args)
-    with open(args.output_folder + "/" + os.environ['accession'] + "/" + os.environ['accession'] + "_lineage." + outMeta[0], 'w') as out:
+    with open(outpath + "_lineage." + outMeta[0], 'w') as out:
         out.write("Genome")
         for header in alleles.keys():
             out.write(outMeta[1] + str(header))
         out.write('\n')
-        out.write(str(os.environ['accession']))
+        out.write(str(accession))
         for allele in alleles.values():
             out.write(outMeta[1] + str(allele))
         out.write('\n')
+        
 def generateSummary(args):
     #TODO   change to share a managers list between multiple processing. avoid reading in the end.
     print('Generating Summary Report. Writing to ' + args.output_folder)
@@ -125,6 +150,7 @@ def generateSummary(args):
     with open(args.output_folder + '/summaryReport.' + meta[0], 'w') as out:
         for line in saveList:
             out.write(line + '\n')
+            
 def getOutMeta(args):
     if args.csv_format:
         outMeta = ('csv', ',')
@@ -132,6 +158,7 @@ def getOutMeta(args):
     else:
         outMeta = ('txt', '\t')
         return outMeta
+    
 def timer(genome, start_time_ongoing, start_time_analysis):
     # Total time elapsed
     # since the timer started
@@ -162,11 +189,32 @@ def argsParser():
     output.add_argument('-s','--summary', action='store_true', help='Concatenate all output assignments into single file.')
 
     paths = parser.add_argument_group('DATABASE & PROGRAM Paths')
+    
     base = os.path.join(os.path.dirname(os.path.realpath(__file__)))
+    
     paths.add_argument('-l','--lineages', default=base + '/resources/alleles/alleles.csv', help='Path to specific alleles for each lineage.')
     paths.add_argument('-k','--kma_index', default=base + '/resources/kmaIndex/kmaIndex', help='Path to indexed KMA database.')
+    paths.add_argument('-m', '--mlstPrediction', action='store_true', default=True,
+                     help='Explained in ReadMe. Used as backup when lineage is unable to be called through SaLTy screening. Marked with *.')
+    args = parser.parse_args()
+    # args.threads = 4
+    # args.force = True
+    # args.report = False
+    # args.version = False
+    # args.check = False
+    # args.input_folder = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/lab_members/Liam/salty/Chapter3SALTy/mgen_submission/revision/troubleshooting/inputs/"
+    # args.output_folder = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/lab_members/Liam/salty/Chapter3SALTy/mgen_submission/revision/troubleshooting/outputs/"
+    # args.csv_format = False
+    # args.summary = False
+    # args.mlstPrediction = True
 
-    return(parser.parse_args())
+    # base = os.path.join(os.path.dirname(os.path.realpath(__file__)))
+    # 
+    # args.lineages = base + '/resources/alleles/alleles.csv'
+    # args.kma_index = base + '/resources/kmaIndex/kmaIndex'
+
+    return args
+
 def check_deps(checkonly, args):
     depslist = ["kma"]
     f = 0
@@ -188,18 +236,29 @@ def check_deps(checkonly, args):
             sys.exit(0)
         else:
             return
-def mkdirOutput(args):
-
-    if os.path.exists(args.output_folder + '/' + os.environ['accession']):
-        if args.force:
-            shutil.rmtree(args.output_folder + '/' + os.environ['accession'])
-            os.mkdir(args.output_folder + '/' + os.environ['accession'])
-        else:
-            print('Error: Directory Exists: ' + args.output_folder + '/' + os.environ['accession'])
-            print('Manul kill required (ctrl + C on Linux)')
-            sys.exit(0)
+        
+def mkdirOutput(args,accession):
+    outPath = args.output_folder + '/' + accession + '/kma_' + accession
+    outfolder = args.output_folder + '/' + accession
+    if not os.path.exists(args.output_folder):
+        os.mkdir(args.output_folder)
+        os.mkdir(outfolder)
+    elif not os.path.exists(outfolder):
+        os.mkdir(outfolder)
     else:
-        os.mkdir(args.output_folder + '/' + os.environ['accession'])
+        if os.path.exists(outPath):
+            if args.force:
+                shutil.rmtree(outPath)
+                os.mkdir(outPath)
+            else:
+                raise Exception('Error: Directory Exists: ' + outPath, "Use --force option to overwrite")
+                # print('Manual kill required (ctrl + C on Linux)')
+                # sys.exit(1)
+                # os._exit(1)
+        else:
+            os.mkdir(outPath)
+    return outPath
+            
 def checkInputReads(reads_folder):
     files = list(glob.iglob(reads_folder + '/*'))
     count = 0
@@ -211,6 +270,7 @@ def checkInputReads(reads_folder):
         return True
     else:
         return False
+    
 def collectGenomes(args):
     paths = []
     for fasta in glob.iglob(args.input_folder + '/*fasta'):
@@ -231,9 +291,9 @@ def run_multiprocessing(func, i, n_processors):
         return pool.starmap(func, i)
 
 #main
-def main():
+def main(args):
 
-    args = argsParser()
+    
     version = "1.0.5"
     start_time_ongoing = time.time()
 
@@ -253,11 +313,13 @@ def main():
         if (len(inputPaths) > 0):
             inps = [(path, args, start_time_ongoing) for path in inputPaths]
             run_multiprocessing(caller, inps, args.threads)
-            generateSummary(args)
+            if args.summary:
+                generateSummary(args)
 
     else:
         print("Input folder doees not have assemblies and/or paired end reads.")
         exit()
 
 if __name__ == '__main__':
-    main()
+    args = argsParser()
+    main(args)
