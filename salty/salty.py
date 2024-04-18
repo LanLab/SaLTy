@@ -1,16 +1,13 @@
 import argparse
 import os, shutil
-from os.path import join
 import subprocess
 import glob
 import pandas as pd
-from time import sleep as sl
-import collections
 import multiprocessing
 import time
-import textwrap
 import sys
-
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 #caller
 def caller(path, args, start_time_ongoing):
     start_time_analysis = time.time() ##FIX
@@ -122,7 +119,7 @@ def getAccession(path):
 
 def generateReport(alleles, args,accession,outpath):
     print(accession + ': writing output.')
-    print(alleles)
+    # print(alleles)
     outMeta = getOutMeta(args)
     with open(outpath + "_lineage." + outMeta[0], 'w') as out:
         out.write("Genome")
