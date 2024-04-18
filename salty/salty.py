@@ -272,9 +272,10 @@ def run_multiprocessing(func, i, n_processors):
         return pool.starmap(func, i)
 
 #main
-def main(args):
-
-    
+def main(args=""):
+    #optional args input allows unit tests
+    if args == "":
+        args = argsParser()
     version = "1.0.5"
     start_time_ongoing = time.time()
 
@@ -302,5 +303,6 @@ def main(args):
         exit()
 
 if __name__ == '__main__':
+    
     args = argsParser()
     main(args)
