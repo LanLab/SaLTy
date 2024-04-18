@@ -15,7 +15,7 @@ import sys
 def caller(path, args, start_time_ongoing):
     start_time_analysis = time.time() ##FIX
     alleles = {'Lineage':'-','SACOL1908': '-', 'SACOL0451': '-', 'SACOL2725': '-'}
-    accession = getAccession(path[1])
+    accession = path[2]
     outpath = runkma(path, args,accession)  #alter DB path option
     alleles = filtCalledAlleles(alleles,outpath)
     alleles = getLineageFromAllele(alleles, args,outpath)
@@ -256,14 +256,16 @@ def checkInputReads(reads_folder):
 def collectGenomes(args):
     paths = []
     for fasta in glob.iglob(args.input_folder + '/*fasta'):
-        paths.append(['assembly',fasta])
+        accession = fasta.split('/')[-1].split('.fasta')[0]
+        paths.append(['assembly',fasta,accession])
     for fna in glob.iglob(args.input_folder + '/*fna'):
-        paths.append(['assembly',fna])
+        accession = fna.split('/')[-1].split('.fna')[0]
+        paths.append(['assembly',fna,accession])
     for forwardRead in glob.iglob(args.input_folder + '/*_1.fastq.gz'):
         accesion = forwardRead.split('/')[-1].replace('_1.fastq.gz','')
         reverseRead = f"{args.input_folder}/{accesion}_2.fastq.gz"
         if os.path.isfile(reverseRead):
-            paths.append(['pairedEndReadForward', forwardRead])
+            paths.append(['pairedEndReadForward', forwardRead,accesion])
         else:
             print(f"Failed to find paired end reads for {accesion}")
     return paths
