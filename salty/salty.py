@@ -189,29 +189,14 @@ def argsParser():
     output.add_argument('-s','--summary', action='store_true', help='Concatenate all output assignments into single file.')
 
     paths = parser.add_argument_group('DATABASE & PROGRAM Paths')
-    
+
     base = os.path.join(os.path.dirname(os.path.realpath(__file__)))
-    
+
     paths.add_argument('-l','--lineages', default=base + '/resources/alleles/alleles.csv', help='Path to specific alleles for each lineage.')
     paths.add_argument('-k','--kma_index', default=base + '/resources/kmaIndex/kmaIndex', help='Path to indexed KMA database.')
     paths.add_argument('-m', '--mlstPrediction', action='store_true', default=True,
                      help='Explained in ReadMe. Used as backup when lineage is unable to be called through SaLTy screening. Marked with *.')
     args = parser.parse_args()
-    # args.threads = 4
-    # args.force = True
-    # args.report = False
-    # args.version = False
-    # args.check = False
-    # args.input_folder = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/lab_members/Liam/salty/Chapter3SALTy/mgen_submission/revision/troubleshooting/inputs/"
-    # args.output_folder = "/Users/mjohnpayne/Library/CloudStorage/OneDrive-UNSW/lab_members/Liam/salty/Chapter3SALTy/mgen_submission/revision/troubleshooting/outputs/"
-    # args.csv_format = False
-    # args.summary = False
-    # args.mlstPrediction = True
-
-    # base = os.path.join(os.path.dirname(os.path.realpath(__file__)))
-    # 
-    # args.lineages = base + '/resources/alleles/alleles.csv'
-    # args.kma_index = base + '/resources/kmaIndex/kmaIndex'
 
     return args
 
@@ -252,9 +237,6 @@ def mkdirOutput(args,accession):
                 os.mkdir(outPath)
             else:
                 raise Exception('Error: Directory Exists: ' + outPath, "Use --force option to overwrite")
-                # print('Manual kill required (ctrl + C on Linux)')
-                # sys.exit(1)
-                # os._exit(1)
         else:
             os.mkdir(outPath)
     return outPath

@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - revisions
+      - main
 jobs:
   test:
 
