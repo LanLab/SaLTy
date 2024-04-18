@@ -71,9 +71,9 @@ class TestCollectGenomes(unittest.TestCase):
 
         # Assert that paths are collected correctly
         expected_paths = [
-            ['assembly', os.path.join(test_folder, 'test.fasta')],
-            ['assembly', os.path.join(test_folder, 'test.fna')],
-            ['pairedEndReadForward', os.path.join(test_folder, 'test_1.fastq.gz')]
+            ['assembly', os.path.join(test_folder, 'test.fasta'),"test"],
+            ['assembly', os.path.join(test_folder, 'test.fna'),"test"],
+            ['pairedEndReadForward', os.path.join(test_folder, 'test_1.fastq.gz'),"test"]
         ]
         self.assertEqual(paths, expected_paths)
 
