@@ -276,7 +276,7 @@ def main(args=""):
     #optional args input allows unit tests
     if args == "":
         args = argsParser()
-    version = "1.0.5"
+    version = "1.0.7"
     start_time_ongoing = time.time()
 
     if args.check:
