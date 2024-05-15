@@ -3,8 +3,7 @@ SaLTy assigns a lineage to <i>Staphylococcus aureus</i> WGS data and is suitable
 
 SALTy typing is highly accurate and can quickly analyse large volumes of <i>S. aureus </i> illumina reads (fastq.gz) or genome assemblies (fasta).
 
-Now [published](https://www.medrxiv.org/content/10.1101/2024.01.21.24301506v1](https://www.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.001250) in Microbial Genomics!
-
+Now [Published](https://www.microbiologyresearch.org/content/journal/mgen/10.1099/mgen.0.001250) in Microbial Genomics!
 
 ---
 # Dependencies
